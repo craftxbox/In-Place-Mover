@@ -22,6 +22,10 @@ namespace In_Place_Mover
         bool isFolderSelected = false;
         bool fallback = true;
         bool overwrite = false;
+        bool isDoThreadActive = false;
+        Thread doThread;
+        Thread watchThread;
+
         public Form1()
         {
             InitializeComponent();
@@ -29,7 +33,25 @@ namespace In_Place_Mover
 
         private void Form1_Load(object sender, EventArgs e)
         {
-
+             watchThread = new Thread(() => {
+                 while (true)
+                 {
+                     if (isDoThreadActive)
+                     {
+                         if (!doThread.IsAlive)
+                         {
+                             Invoke(new Action(() => { isDoThreadActive = false; }));
+                             error += "\n" + "ERROR: Worker thread died. Operation aborted.";
+                             MessageBox.Show("Operation failed with errors: \n" + error);
+                             foreach (Control i in this.Controls)
+                             {
+                                 Invoke(new Action(() => { i.Enabled = true; }));
+                             }
+                         }
+                     }
+                 }
+             });
+            watchThread.Start();
         }
 
         private void advanced_Click(object sender, EventArgs e)
@@ -60,6 +82,7 @@ namespace In_Place_Mover
         {
             doFileSelect(true,true);
         }
+
         private void doFileSelect(bool folder, bool destOnly)
         {
             CommonOpenFileDialog fileDialog = new CommonOpenFileDialog();
@@ -80,15 +103,22 @@ namespace In_Place_Mover
             }
         }
 
-
         private void startMove_Click(object sender, EventArgs e)
         {
             this.moveStatus.Text = "In Progress...";
-            new Thread(()=>{doMoveOperation(fileSource.Text, fileDest.Text);}).Start();
+            doThread = new Thread(()=>{doMoveOperation(fileSource.Text, fileDest.Text);});
+            doThread.Start();
+            foreach(Control i in this.Controls)
+            {
+                if (i.Name.StartsWith("moveStatus")) continue;
+                i.Enabled = false;
+            }
         }
 
         private void doMoveOperation(string source, string dest)
         {
+            error = "\n";
+            Invoke(new Action(() => { isDoThreadActive = true; }));
             Invoke(new Action(() => { this.moveStatus.Text = "In Progress..."; }));
             Invoke(new Action(() => { this.moveStatusBar.Minimum = 0; }));
             Invoke(new Action(() => { this.moveStatusBar.Step = 1;  }));
@@ -119,7 +149,7 @@ namespace In_Place_Mover
                     }
                     catch (Exception e)
                     {
-                        error += "\n ERROR: " + e.ToString() + ". Operation aborted.";
+                        error += "\n ERROR: " + e.ToString() + ". Try running as administrator. Operation aborted.";
                         return;
                     }
                     Invoke(new Action(() => { this.moveStatus.Text = "Deleted source."; }));
@@ -189,7 +219,6 @@ namespace In_Place_Mover
                 }
                 else
                 {
-
                     Invoke(new Action(() => { this.moveStatusBar.Maximum = 5; }));
                     Invoke(new Action(() => { this.moveStatus.Text = "Checking destination."; }));
                     if (!Directory.Exists(dest.Substring(0, dest.LastIndexOf('\\'))))
@@ -199,7 +228,7 @@ namespace In_Place_Mover
                     Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
                     if (File.Exists(dest) && !overwrite)
                     {
-                        error += "\n" +  "ERROR: File " + dest + " already exists. Operation aborted.";;
+                        error += "\n" +  "ERROR: File " + dest + " already exists. Enable overwrite to ignore this error. Operation aborted."; ;
                         return;
                     }
                     Invoke(new Action(() => { this.moveStatus.Text = "Destination Checked."; }));
@@ -211,7 +240,7 @@ namespace In_Place_Mover
                     }
                     catch (Exception e)
                     {
-                        error += "\n ERROR: " + e.ToString() + ". Operation aborted.";
+                        error += "\n ERROR: " + e.ToString() + ". Try running as administrator. Operation aborted.";
                         return;
                     }
                     Invoke(new Action(() => { this.moveStatus.Text = "File Copied."; }));
@@ -224,7 +253,7 @@ namespace In_Place_Mover
                     }
                     catch (Exception e)
                     {
-                        error += "\n ERROR: " + e.ToString() + ". Operation aborted.";
+                        error += "\n ERROR: " + e.ToString() + ". Try running as administrator. Operation aborted.";
                         return;
                     }
                     Invoke(new Action(() => { this.moveStatus.Text = "Original File Deleted."; }));
@@ -300,6 +329,11 @@ namespace In_Place_Mover
                 Console.WriteLine(dest);
                 return;
             }
+            Invoke(new Action(() => { isDoThreadActive = false; }));
+            foreach (Control i in this.Controls)
+            {
+                Invoke(new Action(() => { i.Enabled = true; }));
+            }
         }
 
         private void loadBatchFile_Click(object sender, EventArgs e)
@@ -314,6 +348,7 @@ namespace In_Place_Mover
                 batchFilesList.Text = contents;
             }
         }
+
         public bool copyDirectory(string source, string dest)
         {
             DirectoryInfo dir = new DirectoryInfo(source);
@@ -331,7 +366,7 @@ namespace In_Place_Mover
                 }
                 catch (Exception e)
                 {
-                    error += "\n ERROR: " + e.ToString() + ". Operation aborted.";
+                    error += "\n ERROR: " + e.ToString() + ". Try running as administrator. Operation aborted.";
                     return false;
                 }
             }
@@ -341,7 +376,8 @@ namespace In_Place_Mover
                 string path = Path.Combine(dest, file.Name);
                 if(File.Exists(path) && !overwrite)
                 {
-                    error += "\n" +  "ERROR: File " + path + " Already existed. Operation aborted.";;
+                    error += "\n" +  "ERROR: File " + path + " Already existed. Enable overwrite to ignore this error. Operation aborted.";
+                    return false;
                 }
                 else
                 {
@@ -351,7 +387,7 @@ namespace In_Place_Mover
                     }
                     catch (Exception e)
                     {
-                        error += "\n ERROR: " + e.ToString() + ". Operation aborted.";
+                        error += "\n ERROR: " + e.ToString() + ". Try running as administrator. Operation aborted.";
                         return false;
                     }
                 }
@@ -365,6 +401,7 @@ namespace In_Place_Mover
             }
             return true;
         }
+
         public int enumerateFiles(string source)
         {
             int filesNum = 0;
@@ -399,62 +436,81 @@ namespace In_Place_Mover
 
         private void startBatchMove_Click(object sender, EventArgs e)
         {
+            error = "\n";
             this.moveStatus.Text = "In Progress...";
-            new Thread(() => {
-            List<List<string>> lines = new List<List<string>>();
-            foreach (var i in batchFilesList.Text.Split('\n'))
+            doThread = new Thread(() =>
             {
-                string[] srcdstcombo = i.Split('>');
-                if (srcdstcombo.Length != 2)
+                Invoke(new Action(() => { isDoThreadActive = false; }));
+                List<List<string>> lines = new List<List<string>>();
+                foreach (var i in batchFilesList.Text.Split('\n'))
                 {
-                    int badLine = Array.IndexOf(batchFilesList.Text.Split('\n'), i);
-                    error += "\n" + "ERROR: Failed to parse batch list: Too little or many arguments on line " + badLine + ". Operation aborted."; ;
-                    return;
-                }
-                int insertTo = lines.Count;
-                List<string> temp = new List<string>();
-                if (!File.Exists(srcdstcombo[0]) && !Directory.Exists(srcdstcombo[0]))
-                {
-                    int badLine = Array.IndexOf(batchFilesList.Text.Split('\n'), i);
-                    error += "\n" + "ERROR: File/Folder " + srcdstcombo[0] + " Didnt exist on line " + badLine + " . Operation aborted."; ;
-                    return;
-                }
-                temp.Add(srcdstcombo[0]);
-                temp.Add(srcdstcombo[1]);
-                lines.Add(temp);
-            }
-            for (var i = 0; i < lines.Count; i++)
-            {
-                if (!File.Exists(lines[i][0]))
-                {
-                    if (!Directory.Exists(lines[i][0])) {
-                        error += "\n" + "ERROR: File/Folder " + lines[i][0] + " Didnt exist between parsing and doing. Operation aborted."; ;
+                    string[] srcdstcombo = i.Split('>');
+                    if (srcdstcombo.Length != 2)
+                    {
+                        int badLine = Array.IndexOf(batchFilesList.Text.Split('\n'), i);
+                        error += "\n" + "ERROR: Failed to parse batch list: Too little or many arguments on line " + badLine + ". Operation aborted."; ;
                         return;
+                    }
+                    int insertTo = lines.Count;
+                    List<string> temp = new List<string>();
+                    if (!File.Exists(srcdstcombo[0]) && !Directory.Exists(srcdstcombo[0]))
+                    {
+                        int badLine = Array.IndexOf(batchFilesList.Text.Split('\n'), i);
+                        error += "\n" + "ERROR: File/Folder " + srcdstcombo[0] + " Didnt exist on line " + badLine + " . Operation aborted."; ;
+                        return;
+                    }
+                    temp.Add(srcdstcombo[0]);
+                    temp.Add(srcdstcombo[1]);
+                    lines.Add(temp);
+                }
+                for (var i = 0; i < lines.Count; i++)
+                {
+                    if (!File.Exists(lines[i][0]))
+                    {
+                        if (!Directory.Exists(lines[i][0]))
+                        {
+                            error += "\n" + "ERROR: File/Folder " + lines[i][0] + " Didnt exist between parsing and doing. Operation aborted."; ;
+                            return;
+                        }
+                        else
+                        {
+                            isFolderSelected = true;
+                            doMoveOperation(lines[i][0], lines[i][1]);
+                        }
                     }
                     else
                     {
-                        isFolderSelected = true;
+                        isFolderSelected = false;
                         doMoveOperation(lines[i][0], lines[i][1]);
                     }
                 }
-                else
+                if (error.Length > 1)
                 {
-                    isFolderSelected = false;
-                    doMoveOperation(lines[i][0], lines[i][1]);
+                    string showText = "Operation finished with the following warnings:" + error;
+                    MessageBox.Show(showText);
                 }
-            }
-            if (error.Length > 1)
-            {
-                string showText = "Operation finished with the following warnings:" + error;
-                MessageBox.Show(showText);
-            }
                 else
                 {
                     MessageBox.Show("Operation finished with no errors.");
                 }
-            Invoke(new Action(() => this.moveStatus.Text = "Done."));
-            }).Start();
+                Invoke(new Action(() => this.moveStatus.Text = "Done."));
+                Invoke(new Action(() => { isDoThreadActive = false; }));
+                foreach (Control i in this.Controls)
+                {
+                    Invoke(new Action(() => { i.Enabled = true; }));
+                }
+            });
+            doThread.Start();
+            foreach (Control i in this.Controls)
+            {
+                if (i.Name.StartsWith("moveStatus")) continue;
+                i.Enabled = false;
+            }
         }
 
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            watchThread.Abort();
+        }
     }
 }

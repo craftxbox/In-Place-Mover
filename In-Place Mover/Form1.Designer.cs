@@ -270,6 +270,7 @@
             this.MinimumSize = new System.Drawing.Size(516, 140);
             this.Name = "Form1";
             this.Text = "In-Place Mover";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Load += new System.EventHandler(this.Form1_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
