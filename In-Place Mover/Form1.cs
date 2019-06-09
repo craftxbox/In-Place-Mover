@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -82,39 +83,48 @@ namespace In_Place_Mover
 
         private void startMove_Click(object sender, EventArgs e)
         {
-            doMoveOperation(fileSource.Text, fileDest.Text);
+            this.moveStatus.Text = "In Progress...";
+            new Thread(()=>{doMoveOperation(fileSource.Text, fileDest.Text);}).Start();
         }
 
         private void doMoveOperation(string source, string dest)
         {
-            moveStatus.Text = "In Progress...";
-            moveStatusBar.Minimum = 0;
-            moveStatusBar.Step = 1;
+            Invoke(new Action(() => { this.moveStatus.Text = "In Progress..."; }));
+            Invoke(new Action(() => { this.moveStatusBar.Minimum = 0; }));
+            Invoke(new Action(() => { this.moveStatusBar.Step = 1;  }));
 
             if (source.Length > 3 && dest.Length > 3)
             {
                 if (isFolderSelected)
                 {
-                    moveStatus.Text = "Enumerating Files...";
-                    moveStatusBar.Style = ProgressBarStyle.Marquee;
+                    Invoke(new Action(() => { this.moveStatus.Text = "Enumerating Files..."; }));
+                    Invoke(new Action(() => { this.moveStatusBar.Style = ProgressBarStyle.Marquee; }));
                     int files = enumerateFiles(source);
                     if (files == -1)
                     {
                         return;
                     }
-                    moveStatusBar.Maximum = files + 4;
-                    moveStatus.Text = "Enumerated files.";
-                    moveStatusBar.Style = ProgressBarStyle.Continuous;
-                    moveStatusBar.PerformStep();
-                    moveStatus.Text = "Copying files...";
+                    Invoke(new Action(() => { this.moveStatusBar.Maximum = files + 4; }));
+                    Invoke(new Action(() => { this.moveStatus.Text = "Enumerated files."; }));
+                    Invoke(new Action(() => { this.moveStatusBar.Style = ProgressBarStyle.Continuous; }));
+                    Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
+                    Invoke(new Action(() => { this.moveStatus.Text = "Copying files..."; }));
                     if (!copyDirectory(source, dest)) return;
-                    moveStatus.Text = "Finished Copy.";
-                    moveStatusBar.PerformStep();
-                    moveStatus.Text = "Deleting source...";
-                    Directory.Delete(source, true);
-                    moveStatus.Text = "Deleted source.";
-                    moveStatusBar.PerformStep();
-                    moveStatus.Text = "Linking directory";
+                    Invoke(new Action(() => { this.moveStatus.Text = "Finished Copy."; }));
+                    Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
+                    Invoke(new Action(() => { this.moveStatus.Text = "Deleting source..."; }));
+                    try
+                    {
+                        Directory.Delete(source, true);
+                    }
+                    catch (Exception e)
+                    {
+                        error += "\n ERROR: " + e.ToString() + ". Operation aborted.";
+                        return;
+                    }
+                    Invoke(new Action(() => { this.moveStatus.Text = "Deleted source."; }));
+                    Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
+                    Invoke(new Action(() => { this.moveStatus.Text = "Linking directory"; }));
                     if (attemptJunct.Checked || attemptHard.Checked)
                     {
                         Process makeLink = Process.Start("CMD.exe", "/c mklink /J \"" + source + "\" \"" + dest + "\"");
@@ -165,35 +175,61 @@ namespace In_Place_Mover
                             return;
                         }
                     }
-                    moveStatusBar.PerformStep();
-                    moveStatus.Text = "Done.";
+                    Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
+                    Invoke(new Action(() => { this.moveStatus.Text = "Done."; }));
+                    if (error.Length > 1)
+                    {
+                        string showText = "Operation finished with the following warnings:" + error;
+                        MessageBox.Show(showText);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Operation finished with no errors.");
+                    }
                 }
                 else
                 {
 
-                    moveStatusBar.Maximum = 5;
-                    moveStatus.Text = "Checking destination.";
+                    Invoke(new Action(() => { this.moveStatusBar.Maximum = 5; }));
+                    Invoke(new Action(() => { this.moveStatus.Text = "Checking destination."; }));
                     if (!Directory.Exists(dest.Substring(0, dest.LastIndexOf('\\'))))
                     {
                         Directory.CreateDirectory(dest.Substring(0, dest.LastIndexOf('\\')));
                     }
-                    moveStatusBar.PerformStep();
+                    Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
                     if (File.Exists(dest) && !overwrite)
                     {
                         error += "\n" +  "ERROR: File " + dest + " already exists. Operation aborted.";;
                         return;
                     }
-                    moveStatus.Text = "Destination Checked.";
-                    moveStatusBar.PerformStep();
-                    moveStatus.Text = "Copying file.";
-                    File.Copy(source, dest, true);
-                    moveStatus.Text = "File Copied.";
-                    moveStatusBar.PerformStep();
-                    moveStatus.Text = "Deleting Original File.";
+                    Invoke(new Action(() => { this.moveStatus.Text = "Destination Checked."; }));
+                    Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
+                    Invoke(new Action(() => { this.moveStatus.Text = "Copying file."; }));
+                    try
+                    {
+                        File.Copy(source, dest, true);
+                    }
+                    catch (Exception e)
+                    {
+                        error += "\n ERROR: " + e.ToString() + ". Operation aborted.";
+                        return;
+                    }
+                    Invoke(new Action(() => { this.moveStatus.Text = "File Copied."; }));
+                    Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
+                    Invoke(new Action(() => { this.moveStatus.Text = "Deleting Original File."; }));
                     File.Delete(source);
-                    moveStatus.Text = "Original File Deleted.";
-                    moveStatusBar.PerformStep();
-                    moveStatus.Text = "Linking file.";
+                    try
+                    {
+                        File.Delete(source);
+                    }
+                    catch (Exception e)
+                    {
+                        error += "\n ERROR: " + e.ToString() + ". Operation aborted.";
+                        return;
+                    }
+                    Invoke(new Action(() => { this.moveStatus.Text = "Original File Deleted."; }));
+                    Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
+                    Invoke(new Action(() => { this.moveStatus.Text = "Linking file."; }));
                     if (attemptJunct.Checked || attemptHard.Checked)
                     {
                         Process makeLink = Process.Start("CMD.exe", "/c mklink /H \"" + source + "\" \"" + dest + "\"");
@@ -244,8 +280,17 @@ namespace In_Place_Mover
                             return;
                         }
                     }
-                    moveStatusBar.PerformStep();
-                    moveStatus.Text = "Done.";
+                    Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
+                    Invoke(new Action(() => this.moveStatus.Text = "Done"));
+                    if (error.Length > 1)
+                    {
+                        string showText = "Operation finished with the following warnings:" + error;
+                        MessageBox.Show(showText);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Operation finished with no errors.");
+                    }
                 }
             }
             else
@@ -281,7 +326,14 @@ namespace In_Place_Mover
             DirectoryInfo[] dirs = dir.GetDirectories();
             if (!Directory.Exists(dest))
             {
-                Directory.CreateDirectory(dest);
+                try {
+                    Directory.CreateDirectory(dest);
+                }
+                catch (Exception e)
+                {
+                    error += "\n ERROR: " + e.ToString() + ". Operation aborted.";
+                    return false;
+                }
             }
             FileInfo[] files = dir.GetFiles();
             foreach (FileInfo file in files)
@@ -293,10 +345,18 @@ namespace In_Place_Mover
                 }
                 else
                 {
-                    file.CopyTo(path,true);
+                    try
+                    {
+                        file.CopyTo(path, true);
+                    }
+                    catch (Exception e)
+                    {
+                        error += "\n ERROR: " + e.ToString() + ". Operation aborted.";
+                        return false;
+                    }
                 }
-                moveStatusBar.PerformStep();
-                moveStatus.Text = "Copied "+file.Name;
+                Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
+                Invoke(new Action(() => { this.moveStatus.Text = "Copied " + file.Name; }));
             }
             foreach (DirectoryInfo subdir in dirs)
             {
@@ -339,34 +399,36 @@ namespace In_Place_Mover
 
         private void startBatchMove_Click(object sender, EventArgs e)
         {
+            this.moveStatus.Text = "In Progress...";
+            new Thread(() => {
             List<List<string>> lines = new List<List<string>>();
-            foreach(var i in batchFilesList.Text.Split('\n'))
+            foreach (var i in batchFilesList.Text.Split('\n'))
             {
                 string[] srcdstcombo = i.Split('>');
-                if(srcdstcombo.Length != 2)
+                if (srcdstcombo.Length != 2)
                 {
-                    int badLine = Array.IndexOf(batchFilesList.Text.Split('\n'),i);
-                    error += "\n" +  "ERROR: Failed to parse batch list: Too little or many arguments on line "+ badLine + ". Operation aborted.";;
+                    int badLine = Array.IndexOf(batchFilesList.Text.Split('\n'), i);
+                    error += "\n" + "ERROR: Failed to parse batch list: Too little or many arguments on line " + badLine + ". Operation aborted."; ;
                     return;
                 }
                 int insertTo = lines.Count;
                 List<string> temp = new List<string>();
-                if(!File.Exists(srcdstcombo[0]) && !Directory.Exists(srcdstcombo[0]))
+                if (!File.Exists(srcdstcombo[0]) && !Directory.Exists(srcdstcombo[0]))
                 {
                     int badLine = Array.IndexOf(batchFilesList.Text.Split('\n'), i);
-                    error += "\n" +  "ERROR: File/Folder " + srcdstcombo[0] + " Didnt exist on line "+badLine+" . Operation aborted.";;
+                    error += "\n" + "ERROR: File/Folder " + srcdstcombo[0] + " Didnt exist on line " + badLine + " . Operation aborted."; ;
                     return;
                 }
                 temp.Add(srcdstcombo[0]);
                 temp.Add(srcdstcombo[1]);
                 lines.Add(temp);
             }
-            for(var i = 0;i < lines.Count;i++)
+            for (var i = 0; i < lines.Count; i++)
             {
                 if (!File.Exists(lines[i][0]))
                 {
-                    if(!Directory.Exists(lines[i][0])) {
-                        error += "\n" + "ERROR: File/Folder " + lines[i][0] + " Didnt exist between parsing and doing. Operation aborted.";;
+                    if (!Directory.Exists(lines[i][0])) {
+                        error += "\n" + "ERROR: File/Folder " + lines[i][0] + " Didnt exist between parsing and doing. Operation aborted."; ;
                         return;
                     }
                     else
@@ -386,6 +448,13 @@ namespace In_Place_Mover
                 string showText = "Operation finished with the following warnings:" + error;
                 MessageBox.Show(showText);
             }
+                else
+                {
+                    MessageBox.Show("Operation finished with no errors.");
+                }
+            Invoke(new Action(() => this.moveStatus.Text = "Done."));
+            }).Start();
         }
+
     }
 }
