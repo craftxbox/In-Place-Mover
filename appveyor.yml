@@ -1,0 +1,11 @@
+version: 1.0.{build}
+before_build:
+- cmd: nuget restore
+build:
+  verbosity: minimal
+artifacts:
+- path: In-Place Mover\bin\Debug\In-Place Mover.exe
+deploy:
+- provider: GitHub
+  auth_token:
+    secure: 0gX146O323H3uyCTAHQ13xyRQ4CrYfJfNGjMLrwu4QRTnlb3iRSzVS/Un780jAIq
