@@ -10,6 +10,8 @@ artifacts:
 - path: ./In-Place Mover_v%APPVEYOR_BUILD_VERSION%_%APPVEYOR_REPO_COMMIT%.zip
 deploy:
 - provider: GitHub
+  tag: v$(appveyor_build_version)
+  release: Release $(appveyor_build_version)
   auth_token:
     secure: 0gX146O323H3uyCTAHQ13xyRQ4CrYfJfNGjMLrwu4QRTnlb3iRSzVS/Un780jAIq
-  prerelease: true
+  draft: true
