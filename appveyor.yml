@@ -1,11 +1,15 @@
 version: 1.0.{build}
+skip_tags: true
 before_build:
 - cmd: nuget restore
 build:
   verbosity: minimal
+after_build:
+- ps: Compress-Archive -Path './In-Place Mover/bin/Debug/In-Place Mover.exe','./In-Place Mover/bin/Debug/Microsoft.WindowsAPICodePack.dll','./In-Place Mover/bin/Debug/Microsoft.WindowsAPICodePack.Shell.dll' -DestinationPath "./In-Place Mover_v$($Env:APPVEYOR_BUILD_VERSION)_$($Env:APPVEYOR_REPO_COMMIT)"
 artifacts:
-- path: In-Place Mover\bin\Debug\In-Place Mover.exe
+- path: ./In-Place Mover_v%APPVEYOR_BUILD_VERSION%_%APPVEYOR_REPO_COMMIT%
 deploy:
 - provider: GitHub
   auth_token:
     secure: 0gX146O323H3uyCTAHQ13xyRQ4CrYfJfNGjMLrwu4QRTnlb3iRSzVS/Un780jAIq
+  prerelease: true
