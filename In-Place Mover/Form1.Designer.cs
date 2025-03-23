@@ -48,7 +48,8 @@
             this.moveStatusBar = new System.Windows.Forms.ProgressBar();
             this.moveStatus = new System.Windows.Forms.Label();
             this.fallbackCheck = new System.Windows.Forms.CheckBox();
-            this.overwriteBtn = new System.Windows.Forms.CheckBox();
+            this.existingFilesBehaviour = new System.Windows.Forms.ComboBox();
+            this.label2 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // fileSource
@@ -230,23 +231,35 @@
             this.fallbackCheck.UseVisualStyleBackColor = true;
             this.fallbackCheck.CheckedChanged += new System.EventHandler(this.fallbackCheck_CheckedChanged);
             // 
-            // overwriteBtn
+            // existingFilesBehaviour
             // 
-            this.overwriteBtn.AutoSize = true;
-            this.overwriteBtn.Location = new System.Drawing.Point(343, 103);
-            this.overwriteBtn.Name = "overwriteBtn";
-            this.overwriteBtn.Size = new System.Drawing.Size(134, 17);
-            this.overwriteBtn.TabIndex = 22;
-            this.overwriteBtn.Text = "Overwrite Existing Files";
-            this.overwriteBtn.UseVisualStyleBackColor = true;
-            this.overwriteBtn.CheckedChanged += new System.EventHandler(this.overwriteBtn_CheckedChanged);
+            this.existingFilesBehaviour.FormattingEnabled = true;
+            this.existingFilesBehaviour.Items.AddRange(new object[] {
+            "Abort",
+            "Ignore",
+            "Overwrite"});
+            this.existingFilesBehaviour.Location = new System.Drawing.Point(418, 101);
+            this.existingFilesBehaviour.Name = "existingFilesBehaviour";
+            this.existingFilesBehaviour.Size = new System.Drawing.Size(70, 21);
+            this.existingFilesBehaviour.TabIndex = 22;
+            this.existingFilesBehaviour.SelectedIndexChanged += new System.EventHandler(this.existingFilesBehaviour_SelectedIndexChanged_1);
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(342, 106);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(70, 13);
+            this.label2.TabIndex = 23;
+            this.label2.Text = "Existing Files:";
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(500, 101);
-            this.Controls.Add(this.overwriteBtn);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.existingFilesBehaviour);
             this.Controls.Add(this.fallbackCheck);
             this.Controls.Add(this.moveStatus);
             this.Controls.Add(this.moveStatusBar);
@@ -298,7 +311,8 @@
         private System.Windows.Forms.ProgressBar moveStatusBar;
         private System.Windows.Forms.Label moveStatus;
         private System.Windows.Forms.CheckBox fallbackCheck;
-        private System.Windows.Forms.CheckBox overwriteBtn;
+        private System.Windows.Forms.ComboBox existingFilesBehaviour;
+        private System.Windows.Forms.Label label2;
     }
 }
 

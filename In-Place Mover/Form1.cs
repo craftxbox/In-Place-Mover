@@ -22,6 +22,7 @@ namespace In_Place_Mover
         bool isFolderSelected = false;
         bool fallback = true;
         bool overwrite = false;
+        bool skipExisting = false;
         bool isDoThreadActive = false;
         Thread doThread;
         Thread watchThread;
@@ -42,7 +43,7 @@ namespace In_Place_Mover
                          {
                              Invoke(new Action(() => { isDoThreadActive = false; }));
                              error += "\n" + "ERROR: Worker thread died. Operation aborted.";
-                             MessageBox.Show("Operation failed with errors: \n" + error);
+                             MessageBox.Show("Operation failed with errors: \n" + error,"Operation Aborted", MessageBoxButtons.OK, MessageBoxIcon.Error);
                              foreach (Control i in this.Controls)
                              {
                                  Invoke(new Action(() => { i.Enabled = true; }));
@@ -149,7 +150,7 @@ namespace In_Place_Mover
                     }
                     catch (Exception e)
                     {
-                        error += "\n ERROR: " + e.ToString() + ". Try running as administrator. Operation aborted.";
+                        error += "\n ERROR: " + e.ToString() + ". Try running as administrator.\n\n!!! YOUR DATA HAS BEEN SUCCESSFULLY COPIED TO THE DESTINATION AND MAY BE DAMAGED IN THE SOURCE FOLDER !!!\n\n Operation aborted.";
                         return;
                     }
                     Invoke(new Action(() => { this.moveStatus.Text = "Deleted source."; }));
@@ -161,7 +162,7 @@ namespace In_Place_Mover
                         makeLink.WaitForExit(1000);
                         if (!makeLink.HasExited)
                         {
-                            error += "\n" +  "ERROR: Make link never exited. Operation Aborted.";
+                            error += "\n" + "ERROR: Make link never exited. \n\n!!! YOUR DATA HAS BEEN SUCCESSFULLY COPIED TO THE DESTINATION. THE SOURCE NO LONGER EXISTS. !!!\n\n Operation Aborted.";
                             return;
                         }
                         if (makeLink.ExitCode != 0)
@@ -174,18 +175,18 @@ namespace In_Place_Mover
                                 makeLink.WaitForExit(1000);
                                 if (!makeLink.HasExited)
                                 {
-                                    error += "\n" +  "ERROR: Make link never exited. Operation Aborted.";;
+                                    error += "\n" + "ERROR: Make link never exited. \n\n!!! YOUR DATA HAS BEEN SUCCESSFULLY COPIED TO THE DESTINATION. THE SOURCE NO LONGER EXISTS. !!!\n\n Operation Aborted."; ;
                                     return;
                                 }
                                 if (makeLink.ExitCode != 0)
                                 {
-                                    error += "\n" +  "ERROR: Failed to create symlink with code " + makeLink.ExitCode + ". Operation aborted.";;
+                                    error += "\n" +  "ERROR: Failed to create symlink with code " + makeLink.ExitCode + ". \n\n!!! YOUR DATA HAS BEEN SUCCESSFULLY COPIED TO THE DESTINATION. THE SOURCE NO LONGER EXISTS. !!!\n\n Operation aborted."; ;
                                     return;
                                 }
                             }
                             else
                             {
-                                error += "\n" +  "ERROR: Failed to create a junction with code " + makeLink.ExitCode + ". Operation aborted.";;
+                                error += "\n" +  "ERROR: Failed to create a junction with code " + makeLink.ExitCode + ". \n\n!!! YOUR DATA HAS BEEN SUCCESSFULLY COPIED TO THE DESTINATION. THE SOURCE NO LONGER EXISTS. !!!\n\n Operation aborted."; ;
                                 return;
                             }
                         }
@@ -196,12 +197,12 @@ namespace In_Place_Mover
                         makeLink.WaitForExit(1000);
                         if (!makeLink.HasExited)
                         {
-                            error += "\n" +  "ERROR: Make link never exited. Operation Aborted.";;
+                            error += "\n" + "ERROR: Make link never exited. \n\n!!! YOUR DATA HAS BEEN SUCCESSFULLY COPIED TO THE DESTINATION. THE SOURCE NO LONGER EXISTS. !!!\n\n Operation Aborted."; ;
                             return;
                         }
                         if (makeLink.ExitCode != 0)
                         {
-                            error += "\n" +  "ERROR: Failed to create symlink with code " + makeLink.ExitCode + ". Operation aborted.";;
+                            error += "\n" +  "ERROR: Failed to create symlink with code " + makeLink.ExitCode + ".\n\n!!! YOUR DATA HAS BEEN SUCCESSFULLY COPIED TO THE DESTINATION. THE SOURCE FOLDER NO LONGER EXISTS. !!!\n\n Operation aborted."; ;
                             return;
                         }
                     }
@@ -210,11 +211,11 @@ namespace In_Place_Mover
                     if (error.Length > 1)
                     {
                         string showText = "Operation finished with the following warnings:" + error;
-                        MessageBox.Show(showText);
+                        MessageBox.Show(showText, "Operation Finished", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                     else
                     {
-                        MessageBox.Show("Operation finished with no errors.");
+                        MessageBox.Show("Operation finished with no errors.", "Operation Finished", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                 }
                 else
@@ -226,7 +227,7 @@ namespace In_Place_Mover
                         Directory.CreateDirectory(dest.Substring(0, dest.LastIndexOf('\\')));
                     }
                     Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
-                    if (File.Exists(dest) && !overwrite)
+                    if (File.Exists(dest) && !overwrite && !skipExisting)
                     {
                         error += "\n" +  "ERROR: File " + dest + " already exists. Enable overwrite to ignore this error. Operation aborted."; ;
                         return;
@@ -236,7 +237,10 @@ namespace In_Place_Mover
                     Invoke(new Action(() => { this.moveStatus.Text = "Copying file."; }));
                     try
                     {
-                        File.Copy(source, dest, true);
+                        if (File.Exists(dest) && !skipExisting)
+                        {
+                            File.Copy(source, dest, true);
+                        }
                     }
                     catch (Exception e)
                     {
@@ -265,7 +269,7 @@ namespace In_Place_Mover
                         makeLink.WaitForExit(1000);
                         if (!makeLink.HasExited)
                         {
-                            error += "\n" +  "ERROR: Make link never exited. Operation Aborted.";;
+                            error += "\n" +  "ERROR: Make link never exited. \n\n!!! YOUR DATA HAS BEEN SUCCESSFULLY COPIED TO THE DESTINATION. THE SOURCE NO LONGER EXISTS. !!!\n\n Operation Aborted.";;
                             return;
                         }
                         if (makeLink.ExitCode != 0)
@@ -278,18 +282,18 @@ namespace In_Place_Mover
                                 makeLink.WaitForExit(1000);
                                 if (!makeLink.HasExited)
                                 {
-                                    error += "\n" +  "ERROR: Make link never exited. Operation Aborted.";;
+                                    error += "\n" +  "ERROR: Make link never exited. \n\n!!! YOUR DATA HAS BEEN SUCCESSFULLY COPIED TO THE DESTINATION. THE SOURCE NO LONGER EXISTS. !!!\n\n Operation Aborted.";;
                                     return;
                                 }
                                 if (makeLink.ExitCode != 0)
                                 {
-                                    error += "\n" +  "ERROR: Failed to create symlink with code " + makeLink.ExitCode + ". Operation aborted.";;
+                                    error += "\n" +  "ERROR: Failed to create symlink with code " + makeLink.ExitCode + ". \n\n!!! YOUR DATA HAS BEEN SUCCESSFULLY COPIED TO THE DESTINATION. THE SOURCE NO LONGER EXISTS. !!!\n\n Operation aborted.";;
                                     return;
                                 }
                             }
                             else
                             {
-                                error += "\n" +  "ERROR: Failed to create a Hardlink with code " + makeLink.ExitCode + ". Operation aborted.";;
+                                error += "\n" +  "ERROR: Failed to create a Hardlink with code " + makeLink.ExitCode + ". \n\n!!! YOUR DATA HAS BEEN SUCCESSFULLY COPIED TO THE DESTINATION. THE SOURCE NO LONGER EXISTS. !!!\n\n Operation aborted.";;
                                 return;
                             }
                         }
@@ -300,7 +304,7 @@ namespace In_Place_Mover
                         makeLink.WaitForExit(1000);
                         if (!makeLink.HasExited)
                         {
-                            error += "\n" +  "ERROR: Make link never exited. Operation Aborted.";;
+                            error += "\n" + "ERROR: Make link never exited. \n\n!!! YOUR DATA HAS BEEN SUCCESSFULLY COPIED TO THE DESTINATION. THE SOURCE NO LONGER EXISTS. !!!\n\n Operation Aborted."; ;
                             return;
                         }
                         if (makeLink.ExitCode != 0)
@@ -314,11 +318,11 @@ namespace In_Place_Mover
                     if (error.Length > 1)
                     {
                         string showText = "Operation finished with the following warnings:" + error;
-                        MessageBox.Show(showText);
+                        MessageBox.Show(showText, "Operation Finished", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                     else
                     {
-                        MessageBox.Show("Operation finished with no errors.");
+                        MessageBox.Show("Operation finished with no errors.", "Operation Finished", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                 }
             }
@@ -374,7 +378,7 @@ namespace In_Place_Mover
             foreach (FileInfo file in files)
             {
                 string path = Path.Combine(dest, file.Name);
-                if(File.Exists(path) && !overwrite)
+                if(File.Exists(path) && !overwrite && !skipExisting)
                 {
                     error += "\n" +  "ERROR: File " + path + " Already existed. Enable overwrite to ignore this error. Operation aborted.";
                     return false;
@@ -383,7 +387,28 @@ namespace In_Place_Mover
                 {
                     try
                     {
-                        file.CopyTo(path, true);
+                        if (File.Exists(path))
+                        {
+                            if(skipExisting)
+                            {
+                                Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
+                                Invoke(new Action(() => { this.moveStatus.Text = "Ignored " + file.Name; }));
+                            } else if (overwrite)
+                            {
+                                file.CopyTo(path, true);
+                                Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
+                                Invoke(new Action(() => { this.moveStatus.Text = "Overwritten " + file.Name; }));
+                            } else
+                            {
+                                error += "\n" + "ERROR: File " + path + " Already existed. This error is abnormal (code 1), Please report it as a bug! Operation aborted.";
+                                return false;
+                            }
+                        } else
+                        {
+                            Invoke(new Action(() => { this.moveStatus.Text = "Copying " + file.Name; }));
+                            file.CopyTo(path, true);
+                            Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
+                        }
                     }
                     catch (Exception e)
                     {
@@ -391,8 +416,6 @@ namespace In_Place_Mover
                         return false;
                     }
                 }
-                Invoke(new Action(() => { this.moveStatusBar.PerformStep(); }));
-                Invoke(new Action(() => { this.moveStatus.Text = "Copied " + file.Name; }));
             }
             foreach (DirectoryInfo subdir in dirs)
             {
@@ -427,11 +450,6 @@ namespace In_Place_Mover
         private void fallbackCheck_CheckedChanged(object sender, EventArgs e)
         {
             fallback = fallbackCheck.Checked;
-        }
-
-        private void overwriteBtn_CheckedChanged(object sender, EventArgs e)
-        {
-            overwrite = overwriteBtn.Checked;
         }
 
         private void startBatchMove_Click(object sender, EventArgs e)
@@ -487,11 +505,11 @@ namespace In_Place_Mover
                 if (error.Length > 1)
                 {
                     string showText = "Operation finished with the following warnings:" + error;
-                    MessageBox.Show(showText);
+                    MessageBox.Show(showText, "Operation Finished", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
                 else
                 {
-                    MessageBox.Show("Operation finished with no errors.");
+                    MessageBox.Show("Operation finished with no errors.", "Operation Finished", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 Invoke(new Action(() => this.moveStatus.Text = "Done."));
                 Invoke(new Action(() => { isDoThreadActive = false; }));
@@ -511,6 +529,25 @@ namespace In_Place_Mover
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             watchThread.Abort();
+        }
+
+        private void existingFilesBehaviour_SelectedIndexChanged_1(object sender, EventArgs e)
+        {
+            switch (existingFilesBehaviour.SelectedIndex)
+            {
+                case 0:
+                    overwrite = false;
+                    skipExisting = false;
+                    break;
+                case 1:
+                    overwrite = false;
+                    skipExisting = true;
+                    break;
+                case 2:
+                    overwrite = true;
+                    skipExisting = false;
+                    break;
+            }
         }
     }
 }
